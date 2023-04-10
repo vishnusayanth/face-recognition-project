@@ -17,13 +17,13 @@ import glob
 epochs = 100
 lr = 1e-3
 batch_size = 64
-img_dims = (96,96,3)
+img_dims = (64,64,3)
 
 data = []
 labels = []
 
 # load image files from the dataset
-image_files = [f for f in glob.glob(r'C:\Files\gender_dataset_face' + "/**/*", recursive=True) if not os.path.isdir(f)]
+image_files = [f for f in glob.glob(r'gender_dataset_face' + "/**/*", recursive=True) if not os.path.isdir(f)]
 random.shuffle(image_files)
 
 # converting images to arrays and labelling the categories
@@ -35,7 +35,7 @@ for img in image_files:
     image = img_to_array(image)
     data.append(image)
 
-    label = img.split(os.path.sep)[-2] # C:\Files\gender_dataset_face\woman\face_1162.jpg
+    label = img.split(os.path.sep)[-2] # \gender_dataset_face\woman\face_1162.jpg
     if label == "woman":
         label = 1
     elif label == "boy":
@@ -46,17 +46,20 @@ for img in image_files:
         label = 0
         
     labels.append([label]) # [[1], [0], [0], ...]
-
 # pre-processing
 data = np.array(data, dtype="float") / 255.0
 labels = np.array(labels)
 
+print(data)
+print(labels)
 # split dataset for training and validation
 (trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.2,
                                                   random_state=42)
+print(testY)
+print(trainY)
 
-trainY = to_categorical(trainY, num_classes=2) # [[1, 0], [0, 1], [0, 1], ...]
-testY = to_categorical(testY, num_classes=2)
+trainY = to_categorical(trainY, num_classes=4) # [[1, 0], [0, 1], [0, 1], ...]
+testY = to_categorical(testY, num_classes=4)
 
 # augmenting datset 
 aug = ImageDataGenerator(rotation_range=25, width_shift_range=0.1,
@@ -115,10 +118,10 @@ def build(width, height, depth, classes):
 
 # build model
 model = build(width=img_dims[0], height=img_dims[1], depth=img_dims[2],
-                            classes=2)
+                            classes=4)
 
 # compile the model
-opt = Adam(lr=lr, decay=lr/epochs)
+opt = Adam(learning_rate=lr)
 model.compile(loss="binary_crossentropy", optimizer=opt, metrics=["accuracy"])
 
 # train the model
@@ -128,16 +131,18 @@ H = model.fit_generator(aug.flow(trainX, trainY, batch_size=batch_size),
                         epochs=epochs, verbose=1)
 
 # save the model to disk
-model.save('gender_detection.model')
+model.save('/gender_detection_new.model')
 
 # plot training/validation loss/accuracy
 plt.style.use("ggplot")
 plt.figure()
 N = epochs
-plt.plot(np.arange(0,N), H.history["loss"], label="train_loss")
-plt.plot(np.arange(0,N), H.history["val_loss"], label="val_loss")
-plt.plot(np.arange(0,N), H.history["acc"], label="train_acc")
-plt.plot(np.arange(0,N), H.history["val_acc"], label="val_acc")
+history_dict = H.history
+print('#####################   :',history_dict.keys())
+plt.plot(np.arange(0,N), history_dict["loss"], label="train_loss")
+plt.plot(np.arange(0,N), history_dict["val_loss"], label="val_loss")
+plt.plot(np.arange(0,N), history_dict["accuracy"], label="train_acc")
+plt.plot(np.arange(0,N), history_dict["val_accuracy"], label="val_acc")
 
 plt.title("Training Loss and Accuracy")
 plt.xlabel("Epoch #")
